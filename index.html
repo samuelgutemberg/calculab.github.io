@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Calcule o preco justo das suas impressoes 3D com filamento, energia, mao de obra e margem.">
+<title>PrintCalc 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --text:#f0f0f5;--muted:#7a7a96;--muted2:#55556e;
+  --accent:#7c5cfc;--accent2:#a480ff;--accent-bg:rgba(124,92,252,.12);
+  --green:#22d3a5;--green-bg:rgba(34,211,165,.1);
+  --red:#ff5e5e;--red-bg:rgba(255,94,94,.1);
+  --gold:#f59e0b;
+  --radius-sm:12px;--radius-md:16px;--radius-lg:22px;--radius-xl:30px;
+  --shadow:0 8px 32px rgba(0,0,0,.45);--shadow-sm:0 2px 12px rgba(0,0,0,.3);
+  --font:'DM Sans',system-ui,-apple-system,sans-serif;
+  --transition-dur:280ms;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);font-family:var(--font);color:var(--text);min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* ── App shell ── */
+.app{max-width:430px;margin:0 auto;min-height:100dvh;position:relative;padding-bottom:108px}
+
+/* ── Header ── */
+.header{padding:52px 20px 14px;position:relative;z-index:1}
+.header-row{display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 14px rgba(124,92,252,.35);flex-shrink:0}
+.brand-name{font-size:20px;font-weight:800;letter-spacing:-.5px;color:#fff}
+.brand-name sub{font-size:10px;font-weight:700;color:var(--accent2);vertical-align:super;letter-spacing:.05em}
+.header-badge{background:var(--accent-bg);border:1px solid rgba(124,92,252,.25);border-radius:999px;padding:4px 11px;font-size:10px;font-weight:700;color:var(--accent2);letter-spacing:.05em;text-transform:uppercase}
+
+/* ── Tab viewport (wraps the three pages) ── */
+.tab-viewport{
+  position:relative;
+  overflow:hidden;
+}
+.tab-page{
+  will-change:transform,opacity;
+}
+/* -- entry animations triggered via JS -- */
+.page-enter-right{
+  animation:slideInRight var(--transition-dur) cubic-bezier(.4,0,.2,1) both;
+}
+.page-enter-left{
+  animation:slideInLeft var(--transition-dur) cubic-bezier(.4,0,.2,1) both;
+}
+.page-exit-right{
+  animation:slideOutRight var(--transition-dur) cubic-bezier(.4,0,.2,1) both;
+}
+.page-exit-left{
+  animation:slideOutLeft var(--transition-dur) cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInLeft {from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideOutRight{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(40px)}}
+@keyframes slideOutLeft {from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(-40px)}}
+
+/* ── Bottom Nav ── */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:100;padding:0 16px;padding-bottom:max(env(safe-area-inset-bottom,0px),16px)}
+.bottom-nav-inner{background:rgba(19,19,26,.92);border:1px solid var(--border2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:var(--radius-xl);display:flex;padding:6px;gap:4px;box-shadow:var(--shadow)}
+.nav-btn{flex:1;border:none;background:transparent;border-radius:var(--radius-lg);padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:background var(--transition-dur) ease,color var(--transition-dur) ease;color:var(--muted);font-family:var(--font)}
+.nav-btn .nav-icon{font-size:19px;line-height:1;transition:transform .28s cubic-bezier(.34,1.56,.64,1)}
+.nav-btn .nav-label{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:color var(--transition-dur)}
+.nav-btn.active{background:var(--accent-bg);color:var(--accent2)}
+.nav-btn.active .nav-icon{transform:translateY(-2px) scale(1.15)}
+.nav-btn:active{transform:scale(.93)}
+
+/* ── Main pages ── */
+main{padding:0 16px;position:relative;z-index:1}
+
+/* ── Result hero ── */
+.result-hero{background:#14102a;border:1px solid rgba(124,92,252,.2);border-radius:var(--radius-lg);padding:20px 18px 16px;margin-bottom:12px;position:relative;overflow:hidden}
+.result-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);opacity:.85}
+.result-price{font-size:42px;font-weight:800;letter-spacing:-1.5px;line-height:1;margin:5px 0 14px;color:#fff;transition:color .25s}
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.metric-card{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px}
+.metric-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.metric-value{font-size:15px;font-weight:700;margin-top:3px;color:#fff}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 15px;margin-bottom:12px;box-shadow:var(--shadow-sm);transition:border-color .2s}
+.card:focus-within{border-color:var(--border2)}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.card-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.card-icon.purple{background:var(--accent-bg)}
+.card-icon.green{background:var(--green-bg)}
+.card-icon.gold{background:rgba(245,158,11,.12)}
+.card-icon.blue{background:rgba(59,130,246,.1)}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* ── Fields ── */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+label{display:block;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+input,select{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 13px;font-size:16px;font-family:var(--font);font-weight:600;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s,background .2s;-webkit-appearance:none;appearance:none}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);background:#1e1e2e}
+input::placeholder{color:var(--muted2);font-weight:400}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a7a96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;cursor:pointer}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]{-moz-appearance:textfield}
+
+/* ── Breakdown ── */
+.breakdown-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.breakdown-row:last-child{border-bottom:0;padding-bottom:0}
+.breakdown-row:first-child{padding-top:0}
+.row-left{display:flex;align-items:center;gap:9px}
+.row-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.row-label{font-size:13px;color:var(--muted);font-weight:500}
+.row-value{font-size:14px;font-weight:700;color:var(--text)}
+
+/* ── Notice ── */
+.notice{font-size:12px;color:var(--muted2);line-height:1.55;background:rgba(255,255,255,.03);border-radius:var(--radius-sm);padding:10px 12px;border-left:2px solid var(--accent);margin-top:10px}
+
+/* ── Buttons ── */
+.actions{display:flex;gap:10px;margin-bottom:12px}
+.btn{border:none;border-radius:var(--radius-md);padding:14px 16px;font-family:var(--font);font-weight:700;font-size:14px;cursor:pointer;transition:all .18s ease;position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.95)}
+.btn-primary{background:var(--accent);color:#fff;flex:1;box-shadow:0 4px 18px rgba(124,92,252,.28)}
+.btn-primary:hover{background:#6d4fe8}
+.btn-secondary{background:var(--surface2);color:var(--muted);border:1.5px solid var(--border)}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1.5px solid rgba(255,94,94,.2);width:100%;margin-top:12px}
+.btn-full{width:100%}
+
+/* ── Icon-only btn (history actions) ── */
+.btn-icon{border:none;background:transparent;cursor:pointer;padding:7px;border-radius:var(--radius-sm);color:var(--muted);font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-tap-highlight-color:transparent}
+.btn-icon:active{transform:scale(.9)}
+.btn-icon.edit:hover,.btn-icon.edit:focus{background:var(--accent-bg);color:var(--accent2)}
+.btn-icon.del:hover,.btn-icon.del:focus{background:var(--red-bg);color:var(--red)}
+
+/* ── History ── */
+.history-item{padding:13px 0;border-bottom:1px solid var(--border);animation:fadeUp .22s ease both}
+.history-item:last-child{border-bottom:0;padding-bottom:0}
+.history-item:first-child{padding-top:0}
+.history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.history-info{flex:1;min-width:0}
+.history-name{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.history-price{font-size:16px;font-weight:800;color:var(--accent2);flex-shrink:0;margin-right:2px}
+.history-actions{display:flex;gap:2px;flex-shrink:0}
+.history-meta{margin-top:5px;font-size:12px;color:var(--muted);font-weight:500;display:flex;flex-wrap:wrap;gap:5px}
+.history-tag{background:var(--surface2);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:600}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:38px 20px;color:var(--muted2)}
+.empty-icon{font-size:38px;margin-bottom:10px;opacity:.45}
+.empty-text{font-size:14px;font-weight:500}
+
+/* ── Settings ── */
+.settings-save-note{font-size:11px;color:var(--muted2);text-align:center;margin-top:10px;font-weight:500}
+
+/* ── Toast ── */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--surface2);border:1px solid var(--border2);border-radius:999px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:var(--shadow);z-index:999;transition:transform .32s cubic-bezier(.34,1.56,.64,1),opacity .22s;opacity:0;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast-icon{font-size:15px}
+
+/* ── Helpers ── */
+.hidden{display:none!important}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:360px){.result-price{font-size:34px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="header">
+  <div class="header-row">
+    <div class="brand">
+      <div class="brand-icon">&#x1F5A8;</div>
+      <div class="brand-name">PrintCalc <sub>3D</sub></div>
+    </div>
+    <div class="header-badge">Beta</div>
+  </div>
+</header>
+
+<div class="tab-viewport">
+
+<!-- ── CALCULADORA ── -->
+<main id="calc" class="tab-page">
+  <section class="result-hero">
+    <div class="result-label">Preco sugerido</div>
+    <div class="result-price" id="salePrice">R$ 0,00</div>
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="metric-label">Custo total</div><div class="metric-value" id="totalCost">R$ 0,00</div></div>
+      <div class="metric-card"><div class="metric-label">Lucro estimado</div><div class="metric-value" id="profit">R$ 0,00</div></div>
+      <div class="metric-card"><div class="metric-label">Margem</div><div class="metric-value" id="marginOut">60%</div></div>
+      <div class="metric-card"><div class="metric-label">Filamento</div><div class="metric-value" id="materialCost">R$ 0,00</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><div class="card-icon purple">&#x1F4E6;</div><div class="card-title">Peca</div></div>
+    <div class="field"><label for="name">Nome do produto</label><input id="name" type="text" placeholder="Ex.: Chaveiro personalizado"></div>
+    <div class="grid">
+      <div class="field"><label for="material">Material</label><select id="material"><option>PLA</option><option>PETG</option><option>TPU</option><option>ABS</option><option>ASA</option><option>Outro</option></select></div>
+      <div class="field"><label for="grams">Peso (g)</label><input id="grams" type="number" min="0" step="0.01" value="38" inputmode="decimal"></div>
+    </div>
+    <div class="field" style="margin-bottom:0"><label for="hours">Tempo de impressao (h)</label><input id="hours" type="number" min="0" step="0.01" value="2.4" inputmode="decimal"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><div class="card-icon green">&#x1F4B8;</div><div class="card-title">Custos</div></div>
+    <div class="grid">
+      <div class="field"><label for="filamentKg">Filamento (R$/kg)</label><input id="filamentKg" type="number" min="0" step="0.01" value="100" inputmode="decimal"></div>
+      <div class="field"><label for="kwh">Energia (R$/kWh)</label><input id="kwh" type="number" min="0" step="0.01" value="1" inputmode="decimal"></div>
+      <div class="field"><label for="power">Potencia (kW)</label><input id="power" type="number" min="0" step="0.01" value="0.10" inputmode="decimal"></div>
+      <div class="field"><label for="machine">Maquina (R$/h)</label><input id="machine" type="number" min="0" step="0.01" value="0.50" inputmode="decimal"></div>
+      <div class="field"><label for="laborRate">Mao de obra (R$/h)</label><input id="laborRate" type="number" min="0" step="0.01" value="0" inputmode="decimal"></div>
+      <div class="field"><label for="laborHours">Tempo M.O. (h)</label><input id="laborHours" type="number" min="0" step="0.01" value="0" inputmode="decimal"></div>
+      <div class="field"><label for="pack">Embalagem (R$)</label><input id="pack" type="number" min="0" step="0.01" value="0" inputmode="decimal"></div>
+      <div class="field" style="margin-bottom:0"><label for="other">Outros custos (R$)</label><input id="other" type="number" min="0" step="0.01" value="0" inputmode="decimal"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><div class="card-icon gold">&#x1F3F7;&#xFE0F;</div><div class="card-title">Venda</div></div>
+    <div class="grid">
+      <div class="field"><label for="margin">Margem (%)</label><input id="margin" type="number" min="0" max="99.9" step="0.1" value="60" inputmode="decimal"></div>
+      <div class="field" style="margin-bottom:0"><label for="fee">Taxa plataforma (%)</label><input id="fee" type="number" min="0" max="99.9" step="0.1" value="0" inputmode="decimal"></div>
+    </div>
+    <div class="notice">A margem e calculada sobre o preco final. A taxa e descontada do valor recebido.</div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><div class="card-icon blue">&#x1F4CA;</div><div class="card-title">Detalhamento</div></div>
+    <div class="breakdown-row"><div class="row-left"><div class="row-dot" style="background:#a480ff"></div><span class="row-label">Filamento</span></div><span class="row-value" id="dMaterial">R$ 0,00</span></div>
+    <div class="breakdown-row"><div class="row-left"><div class="row-dot" style="background:#22d3a5"></div><span class="row-label">Energia</span></div><span class="row-value" id="dEnergy">R$ 0,00</span></div>
+    <div class="breakdown-row"><div class="row-left"><div class="row-dot" style="background:#60a5fa"></div><span class="row-label">Maquina/manutencao</span></div><span class="row-value" id="dMachine">R$ 0,00</span></div>
+    <div class="breakdown-row"><div class="row-left"><div class="row-dot" style="background:#f59e0b"></div><span class="row-label">Mao de obra</span></div><span class="row-value" id="dLabor">R$ 0,00</span></div>
+    <div class="breakdown-row"><div class="row-left"><div class="row-dot" style="background:#fb7185"></div><span class="row-label">Embalagem + outros</span></div><span class="row-value" id="dExtras">R$ 0,00</span></div>
+  </section>
+
+  <div class="actions">
+    <button class="btn btn-secondary" id="clearBtn">Limpar</button>
+    <button class="btn btn-primary" id="saveBtn">Salvar no historico</button>
+  </div>
+</main>
+
+<!-- ── HISTORICO ── -->
+<main id="history" class="tab-page hidden">
+  <section class="card">
+    <div class="card-header"><div class="card-icon purple">&#x1F5C2;&#xFE0F;</div><div class="card-title">Pecas salvas</div></div>
+    <div id="historyList"></div>
+    <button class="btn btn-danger" id="clearHistory">Apagar historico</button>
+  </section>
+</main>
+
+<!-- ── CONFIGURACOES ── -->
+<main id="settings" class="tab-page hidden">
+  <section class="card">
+    <div class="card-header"><div class="card-icon gold">&#x2699;&#xFE0F;</div><div class="card-title">Padroes da impressora</div></div>
+    <div class="grid">
+      <div class="field"><label for="sFilament">Filamento (R$/kg)</label><input id="sFilament" type="number" value="100" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label for="sKwh">Energia (R$/kWh)</label><input id="sKwh" type="number" value="1" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label for="sPower">Potencia (kW)</label><input id="sPower" type="number" value="0.10" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label for="sMachine">Maquina (R$/h)</label><input id="sMachine" type="number" value="0.50" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label for="sMargin">Margem padrao (%)</label><input id="sMargin" type="number" value="60" step="0.1" inputmode="decimal"></div>
+      <div class="field" style="margin-bottom:0"><label for="sFee">Taxa plataforma (%)</label><input id="sFee" type="number" value="0" step="0.1" inputmode="decimal"></div>
+    </div>
+    <div style="height:12px"></div>
+    <button class="btn btn-primary btn-full" id="saveSettings">Salvar padroes</button>
+    <p class="settings-save-note">Dados salvos localmente no navegador deste aparelho.</p>
+  </section>
+</main>
+
+</div><!-- /tab-viewport -->
+</div><!-- /app -->
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <button class="nav-btn active" data-tab="calc" data-idx="0" id="navCalc">
+      <span class="nav-icon">&#x1F9EE;</span>
+      <span class="nav-label">Calcular</span>
+    </button>
+    <button class="nav-btn" data-tab="history" data-idx="1" id="navHistory">
+      <span class="nav-icon">&#x1F4CB;</span>
+      <span class="nav-label">Historico</span>
+    </button>
+    <button class="nav-btn" data-tab="settings" data-idx="2" id="navSettings">
+      <span class="nav-icon">&#x2699;&#xFE0F;</span>
+      <span class="nav-label">Padroes</span>
+    </button>
+  </div>
+</nav>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span class="toast-icon" id="toastIcon">&#x2705;</span><span id="toastMsg">Salvo!</span></div>
+
+<script>
+/* ── Utils ── */
+const $=id=>document.getElementById(id);
+const ids=['name','material','grams','hours','filamentKg','kwh','power','machine','laborRate','laborHours','pack','other','margin','fee'];
+const brl=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v)||0);
+const val=id=>parseFloat($(id).value)||0;
+
+/* ── Toast ── */
+let toastTimer;
+function showToast(msg,icon='✅'){
+  const t=$('toast');
+  $('toastMsg').textContent=msg;
+  $('toastIcon').textContent=icon;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+/* ── Tab navigation with slide transition ── */
+const tabs=['calc','history','settings'];
+let currentIdx=0;
+
+function switchTab(toTab,toIdx){
+  if(toTab===tabs[currentIdx])return;
+  const fromPage=$(tabs[currentIdx]);
+  const toPage=$(toTab);
+  const goRight=toIdx>currentIdx;
+
+  // exit current
+  fromPage.classList.add(goRight?'page-exit-left':'page-exit-right');
+  fromPage.addEventListener('animationend',()=>{
+    fromPage.classList.add('hidden');
+    fromPage.classList.remove('page-exit-left','page-exit-right');
+  },{once:true});
+
+  // enter new
+  toPage.classList.remove('hidden');
+  toPage.classList.add(goRight?'page-enter-right':'page-enter-left');
+  toPage.addEventListener('animationend',()=>{
+    toPage.classList.remove('page-enter-right','page-enter-left');
+  },{once:true});
+
+  currentIdx=toIdx;
+  if(toTab==='history')renderHistory();
+}
+
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    switchTab(btn.dataset.tab, parseInt(btn.dataset.idx));
+  };
+});
+
+/* ── Calc ── */
+function calc(){
+  const material=val('grams')/1000*val('filamentKg');
+  const energy=val('hours')*val('power')*val('kwh');
+  const machine=val('hours')*val('machine');
+  const labor=val('laborHours')*val('laborRate');
+  const extras=val('pack')+val('other');
+  const cost=material+energy+machine+labor+extras;
+  const margin=Math.min(Math.max(val('margin'),0),99.9)/100;
+  const fee=Math.min(Math.max(val('fee'),0),99.9)/100;
+  let price=margin>=1?cost:cost/(1-margin);
+  price=fee>=1?price:price/(1-fee);
+  const received=price*(1-fee);
+  const profit=received-cost;
+  $('salePrice').textContent=brl(price);
+  $('totalCost').textContent=brl(cost);
+  $('profit').textContent=brl(profit);
+  $('marginOut').textContent=(margin*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+  $('materialCost').textContent=brl(material);
+  $('dMaterial').textContent=brl(material);
+  $('dEnergy').textContent=brl(energy);
+  $('dMachine').textContent=brl(machine);
+  $('dLabor').textContent=brl(labor);
+  $('dExtras').textContent=brl(extras);
+  const p=$('profit');
+  p.style.color=profit<0?'var(--red)':profit===0?'var(--muted)':'var(--green)';
+  return{material,energy,machine,labor,extras,cost,price,profit};
+}
+ids.forEach(id=>$(id).addEventListener('input',calc));
+
+/* ── Load a history item into the calc form ── */
+function loadIntoCalc(item){
+  $('name').value=item.name||'';
+  // material select
+  const sel=$('material');
+  for(let i=0;i<sel.options.length;i++){
+    if(sel.options[i].value===item.material){sel.selectedIndex=i;break;}
+  }
+  $('grams').value=item.grams||0;
+  $('hours').value=item.hours||0;
+  // if we saved extra cost fields, restore them too
+  if(item.laborRate!=null)$('laborRate').value=item.laborRate;
+  if(item.laborHours!=null)$('laborHours').value=item.laborHours;
+  if(item.pack!=null)$('pack').value=item.pack;
+  if(item.other!=null)$('other').value=item.other;
+  if(item.filamentKg!=null)$('filamentKg').value=item.filamentKg;
+  if(item.kwh!=null)$('kwh').value=item.kwh;
+  if(item.power!=null)$('power').value=item.power;
+  if(item.machine!=null)$('machine').value=item.machine;
+  if(item.margin!=null)$('margin').value=item.margin;
+  if(item.fee!=null)$('fee').value=item.fee;
+  calc();
+}
+
+/* ── Settings ── */
+function loadSettings(){
+  const s=JSON.parse(localStorage.getItem('printcalc_settings')||'{}');
+  const map={filament:'filamentKg',kwh:'kwh',power:'power',machine:'machine',margin:'margin',fee:'fee'};
+  ['filament','kwh','power','machine','margin','fee'].forEach(k=>{
+    if(s[k]!=null){
+      const fid=map[k]; if($(fid))$(fid).value=s[k];
+      const sid='s'+k[0].toUpperCase()+k.slice(1); if($(sid))$(sid).value=s[k];
+    }
+  });
+}
+$('saveSettings').onclick=()=>{
+  const s={filament:val('sFilament'),kwh:val('sKwh'),power:val('sPower'),machine:val('sMachine'),margin:val('sMargin'),fee:val('sFee')};
+  localStorage.setItem('printcalc_settings',JSON.stringify(s));
+  showToast('Padroes salvos!','✅');
+};
+
+/* ── History ── */
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+function getHistory(){return JSON.parse(localStorage.getItem('printcalc_history')||'[]');}
+function saveHistory(data){localStorage.setItem('printcalc_history',JSON.stringify(data.slice(0,100)));}
+
+function renderHistory(){
+  const data=getHistory();
+  if(!data.length){
+    $('historyList').innerHTML='<div class="empty"><div class="empty-icon">&#x1F4ED;</div><div class="empty-text">Nenhuma peca salva ainda.</div></div>';
+    return;
+  }
+  $('historyList').innerHTML=data.map((x,i)=>{
+    const date=x.date?new Date(x.date).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'';
+    return`<div class="history-item" data-index="${i}">
+      <div class="history-head">
+        <div class="history-info">
+          <div class="history-name">${esc(x.name||'Sem nome')}</div>
+          <div class="history-meta">
+            <span class="history-tag">${esc(x.material)}</span>
+            <span>${x.grams} g</span>
+            <span>${x.hours} h</span>
+            <span>custo ${brl(x.cost)}</span>
+            ${date?`<span>${date}</span>`:''}
+          </div>
+        </div>
+        <span class="history-price">${brl(x.price)}</span>
+        <div class="history-actions">
+          <button class="btn-icon edit" title="Editar" data-action="edit" data-index="${i}">&#x270F;&#xFE0F;</button>
+          <button class="btn-icon del" title="Excluir" data-action="del" data-index="${i}">&#x1F5D1;&#xFE0F;</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // delegate click events
+  $('historyList').querySelectorAll('[data-action]').forEach(btn=>{
+    btn.onclick=(e)=>{
+      e.stopPropagation();
+      const idx=parseInt(btn.dataset.index);
+      if(btn.dataset.action==='del'){
+        deleteHistoryItem(idx);
+      } else if(btn.dataset.action==='edit'){
+        editHistoryItem(idx);
+      }
+    };
+  });
+}
+
+function deleteHistoryItem(idx){
+  const data=getHistory();
+  const name=data[idx]?.name||'esta peca';
+  if(!confirm('Excluir "'+name+'"?'))return;
+  data.splice(idx,1);
+  saveHistory(data);
+  renderHistory();
+  showToast('"' + name + '" removida.', '🗑️');
+}
+
+function editHistoryItem(idx){
+  const data=getHistory();
+  const item=data[idx];
+  if(!item)return;
+  loadIntoCalc(item);
+  // switch to calc tab
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  $('navCalc').classList.add('active');
+  switchTab('calc',0);
+  showToast('Editando: ' + (item.name || 'Sem nome'), '✏️');
+}
+
+$('saveBtn').onclick=()=>{
+  const r=calc();
+  const data=getHistory();
+  data.unshift({
+    name:$('name').value,
+    material:$('material').value,
+    grams:val('grams'),hours:val('hours'),
+    filamentKg:val('filamentKg'),kwh:val('kwh'),
+    power:val('power'),machine:val('machine'),
+    laborRate:val('laborRate'),laborHours:val('laborHours'),
+    pack:val('pack'),other:val('other'),
+    margin:val('margin'),fee:val('fee'),
+    cost:r.cost,price:r.price,
+    date:new Date().toISOString()
+  });
+  saveHistory(data);
+  renderHistory();
+  const savedName = $('name').value.trim() || 'Sem nome';
+  showToast('"' + savedName + '" salva!', '💾');
+};
+
+$('clearHistory').onclick=()=>{
+  if(confirm('Apagar todo o historico?')){
+    localStorage.removeItem('printcalc_history');
+    renderHistory();
+    showToast('Histórico apagado.', '🗑️');
+  }
+};
+
+$('clearBtn').onclick=()=>{
+  ['grams','hours','laborRate','laborHours','pack','other'].forEach(id=>$(id).value='0');
+  $('name').value='';
+  calc();
+  showToast('Campos limpos.', '🧹');
+};
+
+/* ── Init ── */
+loadSettings();
+renderHistory();
+calc();
+</script>
+</body>
+</html>
